@@ -9,7 +9,9 @@ Clone or download this repo .
 
 Create a Firebase Project on the [Firebase Console](https://console.firebase.google.com).
 
-Create a Firestore under the database tab on the [Firebase Console](https://console.firebase.google.com).
+Create a Firestore under the database tab on the [Firebase Console](https://console.firebase.google.com). 
+
+Set Datastore to Native mode (has to be empty)
 
 
 ### 3. Install the Firebase CLI and enable Functions on your Firebase CLI
@@ -55,6 +57,11 @@ This deploys and activates the date Function.
 `main.js`:
 
 ```
+// This function runs before a transaction.
+const beforeTransaction = async (authorization) => {
+    console.log(authorization);
+    return true;
+};
 // This function runs after a transaction was successful.
 const afterTransaction = async (transaction) => {
     // Log transaction
@@ -106,7 +113,7 @@ async function postTransaction(transaction, token) {
     "fireBaseLoginApi": "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword",
     "apiKey": "<firebase web api>",
     "email": "<firebase user email>",
-    "password": "<firebase user password> - Will get this in the next step",
+    "password": "<firebase user password> - Will get this in the next step"
 }
 ```
 
