@@ -9,8 +9,6 @@ Clone or download this repo .
 
 Create a Firebase Project on the [Firebase Console](https://console.firebase.google.com).
 
-Set up your Firebase project by running `firebase use --add`, select your Project ID and follow the instructions.
-
 
 ### 3. Install the Firebase CLI and enable Functions on your Firebase CLI
 
@@ -22,6 +20,12 @@ npm install -g firebase-tools
 
 > Doesn't work? You may need to [change npm permissions](https://docs.npmjs.com/getting-started/fixing-npm-permissions).
 
+You will have to login to your firebase account
+```bash
+firebase login
+```
+
+Set up your Firebase project by running `firebase use --add`, select your Project ID and follow the instructions.
 
 ## Deploy the app to prod
 
