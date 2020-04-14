@@ -109,6 +109,22 @@ async function postTransaction(transaction, token) {
 1) In your firebase console in the Authentication Menu enable email/password sign-in methods
 2) Add new user in the Authentication tab
 3) Remember password and use it along side the email in the above enviromental variable
+4) In database menu add the following to the rules:
+
+    ```
+    rules_version = '2';
+    service cloud.firestore {
+        match /databases/{database}/documents {
+            match/{document=**} {
+                allow read: if request.auth.uid != null;
+            }
+            
+            match /logs/{document=**} {
+                allow write, update: if request.auth.uid != null;
+            }
+        }
+    }
+    ```
 
 ## Final step
 
