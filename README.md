@@ -105,13 +105,13 @@ async function postTransaction(transaction, token) {
 }
 ```
 
-`env.json`:
+**Place replace all needed variables  in the env.json file** : `env.json`:
 
 ```
 {
     "transactionsApi": "https://<project-id>.firebaseapp.com/api/v1/transactions",
     "fireBaseLoginApi": "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword",
-    "apiKey": "<firebase web api>",
+    "apiKey": "<firebase web api> - Web api can be found in project settings",
     "email": "<firebase user email>",
     "password": "<firebase user password> - Will get this in the next step"
 }
