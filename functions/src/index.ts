@@ -85,7 +85,10 @@ app.post("/transactions", async (req, res) => {
   }
 });
 
-// Update the categories collection with new categories
+/**
+ * Update the categories collection with new categories
+ * This collection is mainly to be used as a lookup for any front-ends
+ */
 async function updateMerchantCategories(doc: functions.firestore.DocumentSnapshot) {
   const transaction = doc.data() as Transaction;
   const category = transaction.merchant.category;
