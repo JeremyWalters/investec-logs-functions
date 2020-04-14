@@ -9,6 +9,8 @@ Clone or download this repo .
 
 Create a Firebase Project on the [Firebase Console](https://console.firebase.google.com).
 
+Create a Firestore under the database tab on the [Firebase Console](https://console.firebase.google.com).
+
 
 ### 3. Install the Firebase CLI and enable Functions on your Firebase CLI
 
