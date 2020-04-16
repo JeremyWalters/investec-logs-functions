@@ -19,6 +19,31 @@ main.use(bodyParser.urlencoded({ extended: false }));
 
 // webApi is the main webserver function
 export const webApi = functions.https.onRequest(main);
+export const getSpendingByCategory = functions.https.onCall(async (data, context) => {
+  try {
+    if (!context.auth) {
+      // Throwing an HttpsError so that the client gets the error details.
+      throw new functions.https.HttpsError(
+        "failed-precondition",
+        "The function must be called " + "while authenticated."
+      );
+    }
+
+    const snapshot = await db.collection(transactionsCollection).select("merchant.category.name", "centsAmount").get();
+    const result = {} as { [key: string]: number };
+
+    snapshot.docs.forEach((doc) => {
+      const item = doc.data() as { merchant: Merchant; centsAmount: number };
+      console.info("spendingByCategory: " + item);
+      const cat = item.merchant.category.name;
+      result[cat] = result[cat] ? result[cat] + item.centsAmount : item.centsAmount;
+    });
+    return result;
+  } catch (error) {
+    console.error({ error: `Failed at spendingByCategory: ${error}` });
+    throw new functions.https.HttpsError("unknown", error.message, error);
+  }
+});
 
 // onNewTransaction function will be triggered when new transactions is created
 export const onNewTransaction = functions.firestore
