@@ -2,6 +2,7 @@ import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import * as express from "express";
 import * as bodyParser from "body-parser";
+import { operators } from "./utils";
 
 admin.initializeApp(functions.config().firebase);
 
@@ -12,6 +13,7 @@ const main = express();
 
 const transactionsCollection = "transactions";
 const categoriesCollection = "categories";
+const tagsCollection = "tags";
 
 main.use("/api/v1", app);
 main.use(bodyParser.json());
@@ -99,10 +101,31 @@ const validateFirebaseIdToken = async (req: any, res: any, next: any) => {
 
 app.use(validateFirebaseIdToken);
 
+/**
+ * TODO: Will node split this function as it grows
+ */
 // Add new transaction
 app.post("/transactions", async (req, res) => {
   try {
     const transaction: Transaction = req.body.transaction;
+    transaction.tags = [];
+
+    // Apply tags to transaction if needed
+    const tagsResponse = await db.collection(tagsCollection).get();
+    const tags = tagsResponse.docs.map((doc) => doc.data()) as Tag[];
+
+    for (let tag of tags) {
+      if (!tag.applyFuture) continue;
+
+      if (tag.centsAmount != null && tag.centsAmount != undefined && tag.amountOperator) {
+        if (operators[tag.amountOperator](transaction.centsAmount, tag.centsAmount)) {
+          transaction.tags.push(tag.name);
+        }
+      } else if (tag.merchantName && transaction.merchant.name == tag.merchantName) {
+        transaction.tags.push(tag.name);
+      }
+    }
+
     const response = await db.collection(transactionsCollection).add(transaction);
     res.status(201).send({ success: `Created a new transaction: ${response}` });
   } catch (error) {
@@ -163,6 +186,15 @@ interface Transaction {
   reference: string;
   card: Card;
   merchant: Merchant;
+  tags: string[];
+}
+
+interface Tag {
+  name: string;
+  merchantName: string;
+  centsAmount: number;
+  amountOperator: "<" | "<=" | "==" | ">" | ">=";
+  applyFuture: boolean; // Apply tag to new incoming transactions
 }
 
 export { app };
