@@ -3,6 +3,7 @@ import * as admin from "firebase-admin";
 import * as express from "express";
 import * as bodyParser from "body-parser";
 import { operators } from "./utils";
+import { format, isValid } from "date-fns";
 
 admin.initializeApp(functions.config().firebase);
 
@@ -21,14 +22,44 @@ main.use(bodyParser.urlencoded({ extended: false }));
 
 // webApi is the main webserver function
 export const webApi = functions.https.onRequest(main);
+/**
+ * Get spending by month
+ * Data structure: {[month]: spending}
+ */
+export const getSpendingByMonth = functions.https.onCall(async (data, context) => {
+  try {
+    if (!context.auth) {
+      // Throwing an HttpsError so that the client gets the error details.
+      throw new functions.https.HttpsError("failed-precondition", "The function must be called while authenticated.");
+    }
+
+    const snapshot = await db
+      .collection(transactionsCollection)
+      .select("dateTime", "centsAmount")
+      .orderBy("dateTime", "asc")
+      .get();
+
+    const result = {} as { [key: string]: number };
+
+    for (let i = 0; i < snapshot.size; i++) {
+      const item = snapshot.docs[i].data() as { dateTime: string; centsAmount: number };
+      if (!isValid(new Date(item.dateTime))) continue;
+
+      const monthYear = format(new Date(item.dateTime), "MMM yyyy");
+      result[monthYear] = result[monthYear] ? result[monthYear] + item.centsAmount : item.centsAmount;
+    }
+
+    return result;
+  } catch (error) {
+    console.error({ error: `Failed at getSpendingByMonth: ${error}` });
+    throw new functions.https.HttpsError("unknown", error.message, error);
+  }
+});
 export const getSpendingByCategory = functions.https.onCall(async (data, context) => {
   try {
     if (!context.auth) {
       // Throwing an HttpsError so that the client gets the error details.
-      throw new functions.https.HttpsError(
-        "failed-precondition",
-        "The function must be called " + "while authenticated."
-      );
+      throw new functions.https.HttpsError("failed-precondition", "The function must be called while authenticated.");
     }
 
     const snapshot = await db.collection(transactionsCollection).select("merchant.category.name", "centsAmount").get();
