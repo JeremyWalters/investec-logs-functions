@@ -1,0 +1,38 @@
+{
+  "name": "@investec-logs/backend",
+  "scripts": {
+    "lint": "eslint .",
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "test": "vitest run --exclude test/firestore.rules.test.ts --exclude test/integration.test.ts",
+    "test:watch": "vitest",
+    "test:rules": "vitest run test/firestore.rules.test.ts",
+    "test:emulator": "vitest run test/firestore.rules.test.ts test/integration.test.ts",
+    "serve": "pnpm run build && npx -y firebase-tools@latest emulators:start --config ../../firebase.json --project demo-investec-logs --only auth,firestore,functions,hosting",
+    "start": "pnpm run serve",
+    "deploy": "npx -y firebase-tools@latest deploy --config ../../firebase.json --only functions",
+    "logs": "npx -y firebase-tools@latest functions:log --config ../../firebase.json"
+  },
+  "engines": {
+    "node": "22"
+  },
+  "main": "lib/index.js",
+  "dependencies": {
+    "express": "5.2.1",
+    "firebase-admin": "14.2.0",
+    "firebase-functions": "7.3.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@firebase/rules-unit-testing": "5.0.1",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.0.0",
+    "eslint": "10.7.0",
+    "firebase": "12.16.0",
+    "typescript": "6.0.2",
+    "typescript-eslint": "8.65.0",
+    "vitest": "4.1.10"
+  },
+  "private": true
+}

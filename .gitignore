@@ -46,6 +46,8 @@ build/Release
 
 # Dependency directories
 node_modules/
+.pnpm-store/
+.turbo/
 
 # Optional npm cache directory
 .npm

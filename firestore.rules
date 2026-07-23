@@ -1,12 +1,192 @@
 rules_version = '2';
+
 service cloud.firestore {
-    match /databases/{database}/documents {
-        match/{document=**} {
-            allow read, update: if request.auth.uid != null;
-        }
-        
-        match /logs/{document=**} {
-            allow write, update: if request.auth.uid != null;
-        }
+  match /databases/{database}/documents {
+    function isAuthenticated() {
+      return request.auth != null;
     }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function uidUnchanged(userId) {
+      return isOwner(userId);
+    }
+
+    function uidNotModified() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['uid']);
+    }
+
+    function profilePath() {
+      return /databases/$(database)/documents/accessProfiles/$(request.auth.uid);
+    }
+
+    function hasActiveProfile() {
+      return isAuthenticated()
+        && exists(profilePath())
+        && get(profilePath()).data.active == true;
+    }
+
+    function isActiveMember() {
+      return hasActiveProfile() && get(profilePath()).data.role == 'member';
+    }
+
+    // Restricted account/card access is intentionally denied until every client
+    // query includes a rule-compatible scope filter.
+    function hasSharedLedgerAccess() {
+      return isActiveMember()
+        && get(profilePath()).data.transactionScope.mode == 'all';
+    }
+
+    function validShortString(value, maximum) {
+      return value is string && value.size() > 0 && value.size() <= maximum;
+    }
+
+    function validCategory(category) {
+      return category is map
+        && category.keys().hasAll(['code', 'key', 'name'])
+        && category.keys().hasOnly(['code', 'key', 'name'])
+        && validShortString(category.code, 32)
+        && validShortString(category.key, 64)
+        && validShortString(category.name, 128);
+    }
+
+    function validCountry(country) {
+      return country is map
+        && country.keys().hasAll(['code', 'alpha3', 'name'])
+        && country.keys().hasOnly(['code', 'alpha3', 'name'])
+        && country.code == 'ZA'
+        && country.alpha3 == 'ZAR'
+        && country.name == 'South Africa';
+    }
+
+    function validCard(card) {
+      return card is map
+        && card.keys().hasAll(['id', 'display'])
+        && card.keys().hasOnly(['id', 'display'])
+        && validShortString(card.id, 128)
+        && validShortString(card.display, 128);
+    }
+
+    function validMerchant(merchant) {
+      return merchant is map
+        && merchant.keys().hasAll(['name', 'city', 'country', 'category'])
+        && merchant.keys().hasOnly(['name', 'city', 'country', 'category'])
+        && validShortString(merchant.name, 128)
+        && merchant.city is string
+        && merchant.city.size() <= 128
+        && validCountry(merchant.country)
+        && validCategory(merchant.category);
+    }
+
+    function validTagAt(tags, index) {
+      return tags.size() <= index
+        || (tags[index] is string && tags[index].size() > 0 && tags[index].size() <= 64);
+    }
+
+    function validTags(tags) {
+      return tags is list
+        && tags.size() <= 20
+        && tags.toSet().size() == tags.size()
+        && validTagAt(tags, 0)
+        && validTagAt(tags, 1)
+        && validTagAt(tags, 2)
+        && validTagAt(tags, 3)
+        && validTagAt(tags, 4)
+        && validTagAt(tags, 5)
+        && validTagAt(tags, 6)
+        && validTagAt(tags, 7)
+        && validTagAt(tags, 8)
+        && validTagAt(tags, 9)
+        && validTagAt(tags, 10)
+        && validTagAt(tags, 11)
+        && validTagAt(tags, 12)
+        && validTagAt(tags, 13)
+        && validTagAt(tags, 14)
+        && validTagAt(tags, 15)
+        && validTagAt(tags, 16)
+        && validTagAt(tags, 17)
+        && validTagAt(tags, 18)
+        && validTagAt(tags, 19);
+    }
+
+    function validTransaction(data) {
+      return data.keys().hasAll([
+          'accountNumber', 'dateTime', 'centsAmount', 'currencyCode', 'type',
+          'reference', 'card', 'merchant', 'tags', 'occurredAt', 'sourceHash'
+        ])
+        && data.keys().hasOnly([
+          'accountNumber', 'dateTime', 'centsAmount', 'currencyCode', 'type',
+          'reference', 'card', 'merchant', 'tags', 'occurredAt', 'sourceHash',
+          'createdAt'
+        ])
+        && validShortString(data.accountNumber, 34)
+        && validShortString(data.dateTime, 64)
+        && data.centsAmount is int
+        && data.centsAmount >= -1000000000
+        && data.centsAmount <= 1000000000
+        && data.currencyCode == 'zar'
+        && data.type == 'card'
+        && validShortString(data.reference, 256)
+        && validCard(data.card)
+        && validMerchant(data.merchant)
+        && validTags(data.tags)
+        && data.occurredAt is timestamp
+        && data.sourceHash is string
+        && data.sourceHash.size() == 64
+        && (!('createdAt' in data) || data.createdAt is timestamp);
+    }
+
+    function validTagDefinition(data) {
+      return data is map
+        && validShortString(data.name, 64)
+        && data.applyFuture is bool
+        && (
+          (
+            data.keys().hasAll(['name', 'applyFuture', 'merchantName'])
+            && data.keys().hasOnly(['name', 'applyFuture', 'merchantName'])
+            && validShortString(data.merchantName, 128)
+          )
+          ||
+          (
+            data.keys().hasAll(['name', 'applyFuture', 'centsAmount', 'amountOperator'])
+            && data.keys().hasOnly(['name', 'applyFuture', 'centsAmount', 'amountOperator'])
+            && data.centsAmount is int
+            && data.centsAmount >= -1000000000
+            && data.centsAmount <= 1000000000
+            && data.amountOperator in ['<', '<=', '==', '>', '>=']
+          )
+        );
+    }
+
+    match /accessProfiles/{userId} {
+      allow get: if isOwner(userId);
+      allow list, create, update, delete: if false;
+    }
+
+    match /transactions/{transactionId} {
+      allow read: if hasSharedLedgerAccess();
+      allow create, delete: if false;
+      allow update: if hasSharedLedgerAccess()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['tags'])
+        && validTransaction(request.resource.data);
+    }
+
+    match /tags/{tagId} {
+      allow read: if hasSharedLedgerAccess();
+      allow create, update: if hasSharedLedgerAccess()
+        && validTagDefinition(request.resource.data);
+      allow delete: if hasSharedLedgerAccess();
+    }
+
+    match /categories/{categoryId} {
+      allow read: if hasSharedLedgerAccess();
+      allow create, update, delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
 }

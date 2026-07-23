@@ -1,0 +1,19 @@
+{
+  "name": "investec-company-ledger",
+  "private": true,
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "pnpm run serve",
+    "lint": "turbo run lint",
+    "serve": "pnpm --filter @investec-logs/backend run serve",
+    "test": "turbo run test",
+    "test:emulator": "pnpm --filter @investec-logs/backend run test:emulator"
+  },
+  "devDependencies": {
+    "turbo": "2.4.4"
+  },
+  "packageManager": "pnpm@11.9.0",
+  "engines": {
+    "node": "22"
+  }
+}
